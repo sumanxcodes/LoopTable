@@ -32,6 +32,18 @@ docker-compose up --build
 
 This will start:
 - **db**: Postgres (port 5432)
+- **redis**: Redis (port 6379)
 - **backend**: Express API (port 3000)
 
 Configuration is read from `backend/.env` and `docker-compose.yml`.
+
+### Running the Worker
+
+In a second terminal (after ``docker-compose up``), start the job worker:
+
+```bash
+docker-compose exec backend node src/worker.js
+```
+```
+🔄 LoopTable worker is running, listening for jobs...
+```
