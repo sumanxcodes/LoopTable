@@ -1,0 +1,19 @@
+{
+    "name": "@sumanxcodes/looptable",
+    "version": "1.0.0",
+    "description": "LoopTable Airtable extension: schedule recurring record creation",
+    "scripts": {
+        "lint": "ESLINT_USE_FLAT_CONFIG=false eslint src"
+    },
+    "dependencies": {
+        "@airtable/blocks": "latest",
+        "react": "^16.14.0",
+        "react-dom": "^16.14.0"
+    },
+    "devDependencies": {
+        "eslint": "^9.5.0",
+        "eslint-plugin-react": "^7.34.2",
+        "eslint-plugin-react-hooks": "^4.6.2"
+    },
+    "license": "MIT"
+}

@@ -1,2 +1,13 @@
 # LoopTable
 LoopTable is a "Set and Forget" automation tool for Airtable. It solves a critical platform limitation: the inability to schedule recurring record creation (daily, weekly, monthly) without writing code or using external automation platforms like Zapier.
+
+## Development
+
+### Frontend (Airtable Extension)
+
+```bash
+cd frontend
+npm install
+# Run a local development server; open the Airtable Blocks Playground to load the extension
+npx block run
+```
