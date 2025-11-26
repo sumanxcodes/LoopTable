@@ -11,3 +11,12 @@ npm install
 # Run a local development server; open the Airtable Blocks Playground to load the extension
 npx block run
 ```
+
+### Backend (Engine)
+
+```bash
+cd backend
+npm install
+# Copy .env.example to .env and fill in your Airtable client credentials, encryption key, and DB URL
+npm run dev
+```
