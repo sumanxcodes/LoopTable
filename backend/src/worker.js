@@ -5,6 +5,8 @@
 require('dotenv').config();
 const { Worker, Queue } = require('bullmq');
 const Redis = require('ioredis');
+const fetch = require('node-fetch');
+const { decrypt } = require('./utils/crypto');
 
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 const queueName = 'looptable-schedules';
@@ -28,7 +30,36 @@ const scheduleWorker = new Worker(
     }
     const { base_id, table_id, template_record_id, field_config } = rows[0];
 
-    // 2. Fetch table metadata to know field types
+    // 2. Get fresh access token via stored refresh token
+    const credRes = await pool.query(
+      `SELECT encrypted_refresh_token, iv, auth_tag
+       FROM credentials c
+       JOIN schedules s ON s.user_id = c.user_id
+       WHERE s.id = $1`,
+      [scheduleId],
+    );
+    if (!credRes.rows.length) {
+      throw new Error(`Credentials not found for schedule ${scheduleId}`);
+    }
+    const { encrypted_refresh_token, iv, auth_tag } = credRes.rows[0];
+    const refreshToken = decrypt({ content: encrypted_refresh_token, iv, authTag: auth_tag });
+    const tokenResp2 = await fetch('https://airtable.com/oauth2/v1/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: process.env.AIRTABLE_CLIENT_ID,
+        client_secret: process.env.AIRTABLE_CLIENT_SECRET,
+      }),
+    });
+    const tokenData2 = await tokenResp2.json();
+    if (!tokenData2.access_token) {
+      throw new Error('Failed to refresh Airtable access token');
+    }
+    const accessToken = tokenData2.access_token;
+
+    // Fetch table metadata to know field types
     const metaResp = await fetch(
       `https://api.airtable.com/v0/meta/bases/${base_id}/tables/${table_id}/fields`,
       { headers: { Authorization: `Bearer ${process.env.AIRTABLE_ACCESS_TOKEN}` } },
@@ -46,9 +77,21 @@ const scheduleWorker = new Worker(
     // 4. Sanitize record payload
     const { sanitizeRecord } = require('./utils/sanitize');
     const sanitized = sanitizeRecord(recData.fields, fieldMeta);
-
-    // 5. TODO: Apply date-shift rules (field_config)
-    // 6. TODO: Create new record via Airtable API using sanitized + shifted data
+    // 5. Apply date-shift rules
+    const { applyDateShifts } = require('./utils/dateMath');
+    const shifted = applyDateShifts(sanitized, field_config);
+    // 6. Create new record via Airtable API
+    await fetch(
+      `https://api.airtable.com/v0/${base_id}/${table_id}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fields: shifted }),
+      },
+    );
   },
   { connection }
 );
