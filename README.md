@@ -17,6 +17,7 @@ npx block run
 ```bash
 cd backend
 npm install
-# Copy .env.example to .env and fill in your Airtable client credentials, encryption key, and DB URL
-npm run dev
+# Copy .env.example to .env and fill in your Airtable client credentials, encryption key, and DATABASE_URL
+npm run migrate   # run DB schema migrations (creates tables)
+npm run dev       # start dev server with nodemon
 ```
