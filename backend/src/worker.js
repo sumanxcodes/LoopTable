@@ -17,7 +17,13 @@ const scheduleWorker = new Worker(
   queueName,
   async job => {
     console.log(`Processing job ${job.id}:`, job.name, job.data);
-    // TODO: fetch template record, sanitize, date-shift, create via Airtable API
+    const { scheduleId } = job.data;
+    // 1. Load schedule config from DB (fields, templateRecordId, etc.)
+    // 2. Fetch the template record from Airtable API
+    // 3. Sanitize record payload (remove read-only fields)
+    // 4. Apply date-shift rules per schedule config
+    // 5. Create new record in Airtable via API
+    // (Detailed implementation to follow in Phase 4)
   },
   { connection }
 );
