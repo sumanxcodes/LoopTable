@@ -18,5 +18,20 @@ npx block run
 cd backend
 npm install
 # Copy .env.example to .env and fill in your Airtable client credentials, encryption key, and DB URL
-npm run dev
+npm run migrate   # run DB schema migrations (creates tables)
+npm run dev       # start dev server with nodemon
 ```
+
+### Dockerized Backend & Database
+
+You can also run the backend and PostgreSQL database as Docker services.
+
+```bash
+docker-compose up --build
+```
+
+This will start:
+- **db**: Postgres (port 5432)
+- **backend**: Express API (port 3000)
+
+Configuration is read from `backend/.env` and `docker-compose.yml`.

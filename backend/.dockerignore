@@ -1,0 +1,4 @@
+# Ignore node modules and local env
+node_modules
+npm-debug.log
+.env
