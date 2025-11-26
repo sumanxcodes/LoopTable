@@ -5,6 +5,16 @@ const { encrypt, decrypt } = require('./utils/crypto');
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+// Postgres client
+const { Pool } = require('pg');
+// Redis & queue for schedules
+const Redis = require('ioredis');
+const { Queue } = require('bullmq');
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const scheduleQueue = new Queue('looptable-schedules', {
+  connection: new Redis(process.env.REDIS_URL || 'redis://localhost:6379'),
+});
 const port = process.env.PORT || 3000;
 
 /**
@@ -95,4 +105,57 @@ app.get('/auth/airtable/callback', async (req, res) => {
 
 app.listen(port, () => {
   console.log(`🚀 LoopTable backend listening on port ${port}`);
+});
+
+/**
+ * Create a new recurring schedule
+ */
+app.post('/api/schedule', async (req, res) => {
+  const {
+    userId,
+    baseId,
+    tableId,
+    templateRecordId,
+    cronExpression,
+    timezone,
+    fieldConfig = {},
+  } = req.body;
+  if (!userId || !baseId || !tableId || !templateRecordId || !cronExpression || !timezone) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  try {
+    // Gating: free users may have max 1 active schedule
+    const user = await pool.query(
+      'SELECT subscription_status FROM users WHERE id = $1',
+      [userId],
+    );
+    if (!user.rowCount) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const status = user.rows[0].subscription_status;
+    if (status === 'free') {
+      const activeCount = await pool.query(
+        'SELECT COUNT(*) FROM schedules WHERE user_id = $1 AND is_active',
+        [userId],
+      );
+      if (parseInt(activeCount.rows[0].count, 10) >= 1) {
+        return res.status(403).json({ error: 'Free tier allows only 1 active schedule' });
+      }
+    }
+    // Insert schedule
+    const insertQ = await pool.query(
+      `INSERT INTO schedules
+        (user_id, base_id, table_id, template_record_id, cron_expression, timezone, field_config)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [userId, baseId, tableId, templateRecordId, cronExpression, timezone, fieldConfig],
+    );
+    const scheduleId = insertQ.rows[0].id;
+    // Enqueue first job
+    await scheduleQueue.add(scheduleId, { scheduleId });
+    res.status(201).json({ scheduleId });
+  } catch (err) {
+    console.error('Schedule creation error:', err);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
