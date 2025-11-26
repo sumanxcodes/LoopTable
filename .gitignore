@@ -1,0 +1,4 @@
+### Local-only files
+# Ignore our local docs and env
+docs-local/
+.env
