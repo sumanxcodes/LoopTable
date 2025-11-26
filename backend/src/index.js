@@ -31,7 +31,6 @@ app.get('/auth/airtable', (req, res) => {
 /**
  * OAuth callback endpoint (stub).
  */
-app.get('/auth/airtable/callback', (req, res) => {
 app.get('/auth/airtable/callback', async (req, res) => {
   const { code } = req.query;
   if (!code) {
