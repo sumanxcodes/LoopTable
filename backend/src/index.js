@@ -2,6 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const { encrypt, decrypt } = require('./utils/crypto');
 
+// Set up Postgres client
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 const app = express();
 const port = process.env.PORT || 3000;
 
